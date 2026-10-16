@@ -1,0 +1,18 @@
+{
+  "precision_scale": 0.35,
+  "hardware_tested": false,
+  "arm_down": 135,
+  "version": 7,
+  "uploaded": true,
+  "grip_closed": 15,
+  "drive_scale": 0.75,
+  "program": "Galaxy TeleOp",
+  "steering_reversed": true,
+  "servo_deg_per_second": 90,
+  "build": "passed",
+  "runtime_libraries": "Use original project SDK; snapshot is not standalone.",
+  "arm_up": 45,
+  "movement_checks": "passed",
+  "upload_port": "COM14",
+  "flash_hash_verified": true
+}

@@ -17,6 +17,9 @@ constexpr float axis(float value) {
 }
 
 struct DriveInput { float forward; float turn; };
+// The installed drive turns opposite to the right stick's reported X sign.
+constexpr float steeringAxis(float value) { return -axis(value); }
+
 constexpr DriveInput normalized(float forward, float turn) {
     const float sum = absValue(forward) + absValue(turn);
     return sum > 1.0f ? DriveInput{forward / sum, turn / sum}

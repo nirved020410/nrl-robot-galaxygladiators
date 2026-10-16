@@ -1,8 +1,9 @@
 # Gripper Slow: controls and saved versions
 
-The complete robot program is now version 005, Galaxy TeleOp, uploaded to the
-robot with flash verification on 16 October 2026. The supplied controller
-firmware was uploaded and verified too.
+The latest source is version 008, Galaxy TeleOp, with a simpler main loop.
+It retains version 007's faster servos, reduced drive response, corrected
+directions and BACK-button output stop. Version 008 is built but not uploaded;
+version 007 is the last verified robot upload. See ROBOT_GUIDE.md for details.
 See ROBOT_GUIDE.md for its controls, calibration assumptions, and build status.
 The older guide below describes the retained standalone Gripper Slow test,
 version 003; select Galaxy TeleOp for the full robot controls.

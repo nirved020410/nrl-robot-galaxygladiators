@@ -4,7 +4,8 @@
 
 // Course order (Modules 2.1, 3.1-3.4 and 4.1):
 // hardware/state -> init -> start -> loop -> stop -> registration.
-// Revision 005 keeps revision 004's movement behavior and adds this reading map.
+// Revision 008 keeps revision 007's controls and separates driving/status
+// helpers so the main loop is easier to read.
 class GalaxyTeleOp : public NRLOpMode {
     // 1. Declare hardware, then the state remembered between loop calls.
     HexaServo gripper{{ .signalPin = SERVO_1, .startAngle = GalaxySettings::GRIP_START }};
@@ -16,6 +17,7 @@ class GalaxyTeleOp : public NRLOpMode {
     TankDrive drive{left, right};
     bool ready = false;
     bool requireNeutral = true;
+    bool softStopped = false;
     bool gripReady = false;
     bool armReady = false;
     float gripAngle = GalaxySettings::GRIP_START;
@@ -50,6 +52,7 @@ public:
     void start() override {
         lastTick = millis();
         requireNeutral = true;
+        softStopped = false;
         state = ready ? "RELEASE INPUTS" : "HARDWARE ERROR";
         if (Serial) Serial.println("[GalaxyTeleOp] START");
     }
@@ -67,14 +70,27 @@ public:
         const bool up = gamepad1.pressed(BTN_DPAD_UP);
         const bool down = gamepad1.pressed(BTN_DPAD_DOWN);
         const bool precision = gamepad1.pressed(BTN_LB);
+        const bool stopRequested = gamepad1.justPressed(BTN_Y);
         const float rawForward = gamepad1.leftY();
         const float rawTurn = gamepad1.rightX();
         const bool validAxes = std::isfinite(rawForward) && std::isfinite(rawTurn);
         const float forward = validAxes ? GalaxyMotion::axis(rawForward) : 0.0f;
-        const float turn = validAxes ? GalaxyMotion::axis(rawTurn) : 0.0f;
+        const float turn = validAxes ? GalaxyMotion::steeringAxis(rawTurn) : 0.0f;
 
-        // 4b. Readiness, link freshness and pause take priority over driving.
-        if (!ready) {
+        // BACK stops outputs if the controller's exit confirmation is unavailable.
+        if (stopRequested && !softStopped) {
+            softStopped = true;
+            ready = false;
+            requireNeutral = true;
+            releaseOutputs();
+            state = "OUTPUTS STOPPED";
+            if (Serial) Serial.println("[GalaxyTeleOp] BACK: outputs stopped");
+        }
+
+        // 4b. A soft stop latches; readiness, link freshness and pause follow.
+        if (softStopped) {
+            state = "OUTPUTS STOPPED";
+        } else if (!ready) {
             drive.stop();
             state = "HARDWARE ERROR";
         } else if (stale || !validAxes || pause) {
@@ -89,13 +105,7 @@ public:
                 requireNeutral = false;
         } else {
             // 4c. Command the drive and the two servo targets.
-            drive.setScale(precision ? GalaxySettings::PRECISION_SCALE : GalaxySettings::DRIVE_SCALE);
-            if (forward == 0 && turn == 0) {
-                drive.stop();
-            } else {
-                const auto input = GalaxyMotion::normalized(forward, turn);
-                drive.drive(input.forward, input.turn);
-            }
+            updateDrive(forward, turn, precision);
             const float nextGrip = GalaxyMotion::servoTarget(gripAngle, open, close,
                 GalaxySettings::GRIP_OPEN, GalaxySettings::GRIP_CLOSED, elapsedMs);
             const float nextArm = GalaxyMotion::servoTarget(armAngle, up, down,
@@ -105,22 +115,8 @@ public:
             state = precision ? "PRECISION" : "RUNNING";
         }
 
-        // 4d. Send readable status; these angles are commands, not feedback.
-        if (now - lastReport >= 250) {
-            lastReport = now;
-            telemetry.addData("program", "GALAXY TELEOP 5");
-            telemetry.addData("status", state);
-            telemetry.addData("exit", "TOP LEFT TOGGLE");
-            telemetry.addData("grip target", gripAngle);
-            telemetry.addData("arm target", armAngle);
-            telemetry.addData("battery V", power.getBatteryVoltage());
-            telemetry.addData("drive cap", precision ? GalaxySettings::PRECISION_SCALE : GalaxySettings::DRIVE_SCALE);
-            telemetry.addData("SELECT", open ? "OPEN" : "UP");
-            telemetry.addData("HOME", close ? "CLOSE" : "UP");
-            telemetry.addData("arm input", up == down ? "HOLD" : (up ? "UP" : "DOWN"));
-            if (Serial) Serial.printf("[GalaxyTeleOp] %s f=%.2f t=%.2f grip=%.1f arm=%.1f X=%u A=%u up=%u down=%u\n",
-                state, forward, turn, gripAngle, armAngle, open, close, up, down);
-        }
+        // 4d. Report status at a readable rate.
+        reportStatus(now, forward, turn);
     }
 
     // 5. STOP: stop wheel commands and release the servos.
@@ -132,12 +128,53 @@ public:
     }
 
 private:
+    void updateDrive(float forward, float turn, bool precision) {
+        drive.setScale(precision ? GalaxySettings::PRECISION_SCALE : GalaxySettings::DRIVE_SCALE);
+        if (forward == 0 && turn == 0) {
+            drive.stop();
+            return;
+        }
+        const auto input = GalaxyMotion::normalized(forward, turn);
+        drive.drive(input.forward, input.turn);
+    }
+
+    // gamepad1 stays the same for the whole loop call. Angles are commands,
+    // not measured positions. Report four times a second without blocking.
+    void reportStatus(uint32_t now, float forward, float turn) {
+        if (now - lastReport < 250) return;
+        lastReport = now;
+        const bool open = gamepad1.pressed(BTN_X);
+        const bool close = gamepad1.pressed(BTN_A);
+        const bool up = gamepad1.pressed(BTN_DPAD_UP);
+        const bool down = gamepad1.pressed(BTN_DPAD_DOWN);
+        const bool precision = gamepad1.pressed(BTN_LB);
+        telemetry.addData("program", "GALAXY TELEOP 8");
+        telemetry.addData("status", state);
+        telemetry.addData("stop", "BACK (Y)");
+        telemetry.addData("exit", "TOP LEFT TOGGLE");
+        telemetry.addData("grip target", gripAngle);
+        telemetry.addData("arm target", armAngle);
+        telemetry.addData("battery V", power.getBatteryVoltage());
+        telemetry.addData("drive cap", precision ? GalaxySettings::PRECISION_SCALE : GalaxySettings::DRIVE_SCALE);
+        telemetry.addData("SELECT", open ? "OPEN" : "UP");
+        telemetry.addData("HOME", close ? "CLOSE" : "UP");
+        telemetry.addData("arm input", up == down ? "HOLD" : (up ? "UP" : "DOWN"));
+        if (Serial) Serial.printf("[GalaxyTeleOp] %s f=%.2f t=%.2f grip=%.1f arm=%.1f X=%u A=%u up=%u down=%u\n",
+            state, forward, turn, gripAngle, armAngle, open, close, up, down);
+    }
+
     // Shared cleanup helper, kept below the lifecycle for easier reading.
     void releaseOutputs() {
         drive.stop();
         HexaDCMotor::stopAll();
-        if (gripReady) gripper.detach();
-        if (armReady) arm.detach();
+        if (gripReady) {
+            gripper.detach();
+            gripReady = false;
+        }
+        if (armReady) {
+            arm.detach();
+            armReady = false;
+        }
     }
 };
 

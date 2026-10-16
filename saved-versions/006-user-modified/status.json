@@ -1,0 +1,10 @@
+{
+  "uploaded": "unknown",
+  "drive_scale": 0.85,
+  "grip_closed": 15,
+  "build": "not checked in this snapshot",
+  "servo_deg_per_second": 60,
+  "version": 6,
+  "precision_scale": 0.4,
+  "description": "User modifications preserved before requested speed and direction fixes"
+}

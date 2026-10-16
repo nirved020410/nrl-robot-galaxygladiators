@@ -1,0 +1,11 @@
+{
+  "hardware_tested": false,
+  "change": "Extract drive and status helpers; preserve version 007 movement behavior",
+  "build": "passed",
+  "program": "Galaxy TeleOp",
+  "movement_checks": "passed",
+  "last_verified_robot_upload": 7,
+  "version": 8,
+  "runtime_libraries": "Use original project SDK; snapshot is not standalone.",
+  "uploaded": false
+}
