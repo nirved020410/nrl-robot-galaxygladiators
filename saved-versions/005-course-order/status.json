@@ -1,0 +1,17 @@
+{
+  "settings_partition_preserved": true,
+  "robot_uploaded": true,
+  "controller_port": "COM13",
+  "controller_uploaded": true,
+  "program": "Galaxy TeleOp",
+  "version": 5,
+  "controller_version": "1.5.5",
+  "controller_flash_hash_verified": true,
+  "hardware_tested": false,
+  "runtime_libraries": "Use original project SDK libraries; snapshot is not standalone.",
+  "robot_flash_hash_verified": true,
+  "post_upload": "Robot advertised 6 OpModes; controller silent during 12-second read; program start and pairing not confirmed.",
+  "movement_checks": "passed at compile time",
+  "build": "passed",
+  "robot_port": "COM14"
+}

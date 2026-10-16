@@ -1,0 +1,10 @@
+{
+  "version": 4,
+  "uploaded": false,
+  "runtime_libraries": "Use the original project prebuilt libraries; this snapshot is not a standalone SDK.",
+  "hardware_tested": false,
+  "movement_checks": "passed at compile time",
+  "program": "Galaxy TeleOp",
+  "last_uploaded_version": 3,
+  "build": "passed"
+}
